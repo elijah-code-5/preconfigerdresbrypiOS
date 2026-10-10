@@ -9,8 +9,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Refresh package lists
-        run: sudo apt-get update
+      - name: Free disk space and refresh package lists
+        run: |
+          sudo rm -rf /usr/share/dotnet /opt/ghc /usr/local/lib/android /opt/hostedtoolcache/CodeQL
+          sudo apt-get update
+          df -h /
 
       # Put the kit inside the custom stage so pi-gen can copy it into the image.
       - name: Stage the kit
@@ -34,7 +37,6 @@ jobs:
           timezone: Asia/Dushanbe
           locale: en_GB.UTF-8
           disable-first-boot-user-rename: 1
-          increase-runner-disk-size: true
           compression: xz
 
       - uses: actions/upload-artifact@v4
