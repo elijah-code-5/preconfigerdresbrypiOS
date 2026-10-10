@@ -1,0 +1,7 @@
+[Desktop Entry]
+Type=Application
+Name=Pi Hub Welcome
+Comment=Shows the Pi's IP address and links at startup
+Exec=python3 /opt/pi-kit/welcome/welcome.py
+Terminal=false
+X-GNOME-Autostart-Delay=5

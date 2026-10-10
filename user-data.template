@@ -1,0 +1,21 @@
+#cloud-config
+# Optional: use this INSTEAD of Raspberry Pi Imager's own settings.
+# Replace the CHANGE_ME values, rename this file to "user-data" (no extension)
+# and copy it onto the boot partition together with the pi-kit folder.
+
+hostname: pihub
+manage_etc_hosts: true
+enable_ssh: true
+timezone: Asia/Dushanbe
+
+users:
+  - name: CHANGE_ME_USERNAME
+    groups: [sudo, audio, video, plugdev, netdev, gpio, i2c, spi]
+    shell: /bin/bash
+    lock_passwd: false
+    plain_text_passwd: CHANGE_ME_PASSWORD
+    sudo: ALL=(ALL) NOPASSWD:ALL
+
+runcmd:
+  - [ bash, /boot/firmware/pi-kit/install.sh ]
+  - [ reboot ]

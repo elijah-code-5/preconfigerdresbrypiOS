@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#111418">
+<title>Pi Hub</title>
+<style>
+  :root { --bg:#111418; --card:#1b2027; --text:#e8ecf1; --muted:#8b95a3; --accent:#4da3ff; --ok:#3ecf8e; --bad:#ff6b6b; }
+  @media (prefers-color-scheme: light) {
+    :root { --bg:#f4f6f9; --card:#fff; --text:#1a2029; --muted:#667085; --accent:#1769d6; --ok:#15915a; --bad:#d63b3b; }
+  }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--text); font:16px system-ui, sans-serif; padding:16px; max-width:560px; margin-inline:auto; }
+  h1 { font-size:1.25rem; margin:0 0 12px; display:flex; justify-content:space-between; align-items:center; }
+  .card { background:var(--card); border-radius:14px; padding:16px; margin-bottom:14px; }
+  h2 { font-size:.8rem; text-transform:uppercase; letter-spacing:.06em; color:var(--muted); margin:0 0 12px; }
+  .dot { display:inline-block; width:10px; height:10px; border-radius:50%; background:var(--bad); margin-right:6px; }
+  .dot.on { background:var(--ok); }
+  .pad { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; }
+  button { font:inherit; border:0; border-radius:12px; padding:16px 0; background:var(--accent); color:#fff; cursor:pointer; touch-action:manipulation; }
+  button.stop { background:var(--bad); }
+  button.ghost { background:transparent; color:var(--muted); border:1px solid var(--muted); padding:8px 12px; }
+  .pad .empty { visibility:hidden; }
+  .row { display:flex; gap:8px; align-items:center; margin-bottom:8px; flex-wrap:wrap; }
+  input[type=time], input[type=text] { font:inherit; padding:10px; border-radius:10px; border:1px solid var(--muted); background:var(--bg); color:var(--text); }
+  .days label { margin-right:6px; font-size:.85rem; color:var(--muted); }
+  .alarm { display:flex; justify-content:space-between; align-items:center; padding:10px 0; border-top:1px solid #8883; }
+  .alarm b { font-size:1.2rem; }
+  .small { color:var(--muted); font-size:.85rem; }
+</style>
+</head>
+<body>
+<h1>Pi Hub <span class="small" id="clock"></span></h1>
+
+<div class="card" id="ringcard" style="display:none;border:2px solid var(--bad)">
+  <h2>Alarm ringing <span id="ringlabel"></span></h2>
+  <div class="row">
+    <button id="snooze" style="flex:1">Snooze 9 min</button>
+    <button id="dismiss" class="stop" style="flex:1">Dismiss</button>
+  </div>
+</div>
+
+<div class="card">
+  <h2>Robot <span id="rs"><span class="dot"></span>offline</span></h2>
+  <div class="pad">
+    <span class="empty"></span><button data-cmd="forward">&#9650;</button><span class="empty"></span>
+    <button data-cmd="left">&#9664;</button><button class="stop" data-cmd="stop">STOP</button><button data-cmd="right">&#9654;</button>
+    <span class="empty"></span><button data-cmd="backward">&#9660;</button><span class="empty"></span>
+  </div>
+</div>
+
+<div class="card">
+  <h2>Alarm clock</h2>
+  <div class="row">
+    <input type="time" id="atime" value="07:00">
+    <input type="text" id="alabel" placeholder="Label" style="flex:1;min-width:120px">
+  </div>
+  <div class="row days" id="adays"></div>
+  <div class="row"><button id="aadd" style="padding:10px 18px">Add alarm</button></div>
+  <div id="alist"></div>
+</div>
+
+<p class="small">Alarms ring on the Pi's speaker and send the robot a "wake" command.</p>
+
+<script>
+const $ = s => document.querySelector(s);
+const api = (url, opts) => fetch(url, opts).then(r => r.json());
+const post = (url, body, method='POST') => api(url, {method, headers:{'Content-Type':'application/json'}, body: JSON.stringify(body)});
+const DAYS = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+
+$('#adays').innerHTML = DAYS.map((d,i) => `<label><input type="checkbox" value="${i}" checked> ${d}</label>`).join('');
+
+document.querySelectorAll('[data-cmd]').forEach(b =>
+  b.addEventListener('click', () => post('/api/robot/command', {cmd: b.dataset.cmd})));
+
+$('#aadd').onclick = async () => {
+  const days = [...document.querySelectorAll('#adays input:checked')].map(x => +x.value);
+  await post('/api/alarms', {time: $('#atime').value, label: $('#alabel').value, days});
+  $('#alabel').value = '';
+  loadAlarms();
+};
+
+async function loadAlarms() {
+  const items = await api('/api/alarms');
+  $('#alist').innerHTML = items.length ? '' : '<div class="small">No alarms yet.</div>';
+  items.forEach(a => {
+    const el = document.createElement('div');
+    el.className = 'alarm';
+    el.innerHTML = `<div><b>${a.time}</b> <span class="small">${a.label || ''}</span><br>
+      <span class="small">${a.days.length === 7 ? 'Every day' : a.days.map(d => DAYS[d]).join(' ')}</span></div>
+      <div class="row" style="margin:0">
+        <button class="ghost" data-t="${a.id}">Test</button>
+        <button class="ghost" data-e="${a.id}">${a.enabled ? 'On' : 'Off'}</button>
+        <button class="ghost" data-d="${a.id}">Delete</button>
+      </div>`;
+    el.querySelector('[data-t]').onclick = () => post(`/api/alarms/${a.id}/test`, {});
+    el.querySelector('[data-e]').onclick = async () => { await post(`/api/alarms/${a.id}`, {enabled: !a.enabled}, 'PATCH'); loadAlarms(); };
+    el.querySelector('[data-d]').onclick = async () => { await fetch(`/api/alarms/${a.id}`, {method:'DELETE'}); loadAlarms(); };
+    $('#alist').appendChild(el);
+  });
+}
+
+async function poll() {
+  try {
+    const s = await api('/api/state');
+    $('#clock').textContent = s.now;
+    $('#rs').innerHTML = `<span class="dot ${s.robot_online ? 'on' : ''}"></span>${s.robot_online ? 'online' : 'offline'}`;
+    const a = await api('/api/alarm/state');
+    $('#ringcard').style.display = a.ringing ? 'block' : 'none';
+    $('#ringlabel').textContent = a.label || '';
+  } catch (e) {}
+}
+$('#snooze').onclick = () => post('/api/alarm/snooze', {minutes: 9});
+$('#dismiss').onclick = () => post('/api/alarm/dismiss', {});
+loadAlarms(); poll(); setInterval(poll, 3000);
+</script>
+</body>
+</html>

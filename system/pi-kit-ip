@@ -1,0 +1,37 @@
+#!/bin/bash
+# Writes the Pi's current IP address(es) onto the text login screen (/etc/issue.d).
+IPS=$(hostname -I 2>/dev/null)
+HOST=$(hostname)
+mkdir -p /etc/issue.d
+{
+  echo "=== Pi Hub ==="
+  if [ -z "$IPS" ]; then
+    echo "No network yet - plug in Ethernet or join Wi-Fi."
+  else
+    for ip in $IPS; do
+      case "$ip" in *:*) continue;; esac
+      echo "IP address: $ip"
+      echo "   Hub http://$ip:8080   Nextcloud http://$ip:8081   Home Assistant http://$ip:8123"
+    done
+    echo "Or by name: http://$HOST.local:8080"
+  fi
+  echo
+} > /etc/issue.d/pi-kit.issue
+
+# Keep Nextcloud's list of trusted addresses current (its IP can change after a reboot)
+if command -v docker >/dev/null 2>&1 && [ -f /opt/pi-kit/.env ]; then
+  (
+    cd /opt/pi-kit || exit 0
+    OCC="docker compose --env-file .env exec -T -u www-data nextcloud php occ"
+    $OCC status 2>/dev/null | grep -q 'installed: true' || exit 0
+    $OCC config:system:set trusted_domains 1 --value="localhost" >/dev/null 2>&1
+    $OCC config:system:set trusted_domains 2 --value="$HOST.local" >/dev/null 2>&1
+    n=3
+    for ip in $IPS; do
+      case "$ip" in *:*) continue;; esac
+      $OCC config:system:set trusted_domains $n --value="$ip" >/dev/null 2>&1
+      n=$((n+1))
+    done
+    $OCC config:system:set trusted_domains $n --value="$HOST" >/dev/null 2>&1
+  ) || true
+fi

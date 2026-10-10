@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pi Hub</title>
+<style>
+  body { margin:0; font:16px system-ui,sans-serif; background:#111418; color:#e8ecf1; display:flex; min-height:100vh; align-items:center; justify-content:center; padding:16px; }
+  .box { max-width:420px; width:100%; }
+  input { width:100%; font:inherit; padding:14px; border-radius:10px; border:1px solid #667; background:#1b2027; color:inherit; margin:8px 0 12px; }
+  button { width:100%; font:inherit; padding:14px; border:0; border-radius:10px; background:#4da3ff; color:#fff; }
+  p { color:#8b95a3; }
+</style>
+</head>
+<body>
+<div class="box">
+  <h2>Pi Hub</h2>
+  <p>Enter your Pi's address (shown on the Pi's screen at startup). Your phone must be on the same Wi-Fi.</p>
+  <input id="addr" placeholder="192.168.1.50  or  pihub.local" inputmode="url" autocapitalize="off">
+  <button id="go">Connect</button>
+  <p id="msg"></p>
+</div>
+<script>
+const KEY = 'pihub_addr';
+function target(a) { a = a.trim().replace(/^https?:\/\//, '').replace(/\/.*$/, ''); return 'http://' + (a.includes(':') ? a : a + ':8080') + '/'; }
+async function connect(a) {
+  $msg.textContent = 'Connecting...';
+  try {
+    const ctrl = new AbortController(); setTimeout(() => ctrl.abort(), 4000);
+    await fetch(target(a) + 'api/state', {signal: ctrl.signal, mode: 'no-cors'});
+    localStorage.setItem(KEY, a);
+    location.href = target(a);
+  } catch (e) { $msg.textContent = 'Could not reach the Pi at that address.'; }
+}
+const $msg = document.getElementById('msg');
+const saved = localStorage.getItem(KEY);
+if (saved) { document.getElementById('addr').value = saved; connect(saved); }
+document.getElementById('go').onclick = () => connect(document.getElementById('addr').value);
+</script>
+</body>
+</html>

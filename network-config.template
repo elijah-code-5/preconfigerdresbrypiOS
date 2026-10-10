@@ -1,0 +1,13 @@
+# Optional: only needed with user-data.template and Wi-Fi.
+# Rename to "network-config" (no extension) on the boot partition.
+# Plain Ethernet needs no file at all.
+network:
+  version: 2
+  wifis:
+    renderer: NetworkManager
+    wlan0:
+      dhcp4: true
+      optional: true
+      access-points:
+        "CHANGE_ME_WIFI_NAME":
+          password: "CHANGE_ME_WIFI_PASSWORD"

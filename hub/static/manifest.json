@@ -1,0 +1,9 @@
+{
+  "name": "Pi Hub",
+  "short_name": "Pi Hub",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#111418",
+  "theme_color": "#111418",
+  "icons": []
+}

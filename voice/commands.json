@@ -1,0 +1,15 @@
+{
+  "wake_word": "computer",
+  "commands": {
+    "go forward":   {"type": "robot", "cmd": "forward",  "reply": "Going forward"},
+    "forward":      {"type": "robot", "cmd": "forward"},
+    "go back":      {"type": "robot", "cmd": "backward", "reply": "Backing up"},
+    "turn left":    {"type": "robot", "cmd": "left"},
+    "turn right":   {"type": "robot", "cmd": "right"},
+    "stop":         {"type": "robot", "cmd": "stop",     "reply": "Stopping"},
+    "what time":    {"type": "time"},
+    "snooze":       {"type": "alarm_snooze", "minutes": 9, "reply": "Snoozed for nine minutes"},
+    "dismiss":      {"type": "alarm_dismiss", "reply": "Alarm off"},
+    "good morning": {"type": "robot", "cmd": "wake", "reply": "Good morning"}
+  }
+}

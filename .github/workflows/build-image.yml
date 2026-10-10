@@ -1,0 +1,41 @@
+name: Build Raspberry Pi image
+
+on:
+  workflow_dispatch:
+
+jobs:
+  image:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # Put the kit inside the custom stage so pi-gen can copy it into the image.
+      - name: Stage the kit
+        run: |
+          mkdir -p image-build/stage-pikit/00-kit/files/pi-kit
+          rsync -a --exclude '.git' --exclude '.github' --exclude 'image-build' --exclude 'phone-app/node_modules' \
+            ./ image-build/stage-pikit/00-kit/files/pi-kit/
+
+      - name: Build image
+        uses: usimd/pi-gen-action@v1
+        id: build
+        with:
+          image-name: pihub
+          stage-list: stage0 stage1 stage2 stage3 ./image-build/stage-pikit
+          pi-gen-version: arm64
+          release: trixie
+          enable-ssh: 0
+          username: pi
+          password: pihub-change-me
+          hostname: pihub
+          timezone: Asia/Dushanbe
+          locale: en_GB.UTF-8
+          disable-first-boot-user-rename: 1
+          increase-runner-disk-size: true
+          compression: xz
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pihub-image
+          path: ${{ steps.build.outputs.image-path }}
+          retention-days: 7

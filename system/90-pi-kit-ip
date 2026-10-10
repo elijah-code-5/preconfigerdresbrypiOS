@@ -1,0 +1,6 @@
+#!/bin/bash
+# NetworkManager dispatcher: refresh the login-screen IP whenever a connection changes.
+case "$2" in
+  up|dhcp4-change|connectivity-change) /usr/local/bin/pi-kit-ip ;;
+esac
+exit 0

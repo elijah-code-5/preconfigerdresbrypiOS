@@ -1,0 +1,14 @@
+[Unit]
+Description=Pi Kit first-boot setup (runs once)
+After=network-online.target
+Wants=network-online.target
+ConditionPathExists=!/var/lib/pi-kit/done
+
+[Service]
+Type=oneshot
+ExecStart=/bin/bash /opt/pi-kit/install.sh
+TimeoutStartSec=0
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

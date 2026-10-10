@@ -1,0 +1,10 @@
+{
+  "appId": "local.pihub.app",
+  "appName": "Pi Hub",
+  "webDir": "www",
+  "server": {
+    "androidScheme": "http",
+    "cleartext": true,
+    "allowNavigation": ["*"]
+  }
+}
