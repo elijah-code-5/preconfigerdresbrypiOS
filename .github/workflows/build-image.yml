@@ -22,6 +22,18 @@ jobs:
           rsync -a --exclude '.git' --exclude '.github' --exclude 'image-build' --exclude 'phone-app/node_modules' \
             ./ image-build/stage-pikit/00-kit/files/pi-kit/
 
+      - name: Pre-download app images for the Pi (arm64)
+        run: |
+          mkdir -p image-build/stage-pikit/02-images/files/images
+          for img in mariadb:11 redis:7-alpine nextcloud:apache ghcr.io/home-assistant/home-assistant:stable; do
+            docker pull --platform linux/arm64 "$img"
+            name=$(echo "$img" | tr '/:' '__')
+            docker save "$img" | gzip -3 > "image-build/stage-pikit/02-images/files/images/$name.tar.gz"
+            docker image rm "$img" || true
+          done
+          ls -lh image-build/stage-pikit/02-images/files/images
+          df -h /
+
       - name: Build image
         uses: usimd/pi-gen-action@v1
         id: build

@@ -8,3 +8,9 @@ install -m 644 files/pi-kit/system/pi-kit-firstboot.service "${ROOTFS_DIR}/etc/s
 on_chroot << EOF
 systemctl enable pi-kit-firstboot.service
 EOF
+
+# Show the welcome window and desktop shortcuts from the very first desktop start
+install -m 644 files/pi-kit/system/pi-kit-welcome.desktop "${ROOTFS_DIR}/etc/xdg/autostart/pi-kit-welcome.desktop"
+on_chroot << CHEOF
+bash /opt/pi-kit/system/make-shortcuts.sh pi || true
+CHEOF

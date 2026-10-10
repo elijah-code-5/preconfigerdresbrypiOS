@@ -1,0 +1,14 @@
+docker-ce
+docker-ce-cli
+containerd.io
+docker-compose-plugin
+samba
+avahi-daemon
+python3-flask
+python3-tk
+mpg123
+alsa-utils
+xdg-utils
+curl
+openssl
+ca-certificates

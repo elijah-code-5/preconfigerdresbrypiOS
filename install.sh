@@ -19,11 +19,12 @@ echo "=== Pi Kit install started $(date) ==="
 ARCH=$(dpkg --print-architecture)
 [[ "$ARCH" == "arm64" ]] || { echo "Need 64-bit Raspberry Pi OS (arm64), found $ARCH"; exit 1; }
 
-# Wait for network (first boot can race Wi-Fi)
-for i in $(seq 1 60); do
-  curl -fsI --max-time 5 https://deb.debian.org >/dev/null 2>&1 && break
-  echo "Waiting for internet ($i/60)..."; sleep 5
-done
+# Internet is only needed if something is missing; the prebuilt image already contains everything.
+have_net() { curl -fsI --max-time 5 https://deb.debian.org >/dev/null 2>&1; }
+wait_net() {
+  for i in $(seq 1 120); do have_net && return 0; echo "Waiting for internet ($i/120)..."; sleep 5; done
+  return 1
+}
 
 # Main user = first normal user (uid 1000); on a prebuilt image it may appear a little late
 MAIN_USER=""
@@ -36,19 +37,25 @@ done
 HOME_DIR=$(getent passwd "$MAIN_USER" | cut -d: -f6)
 echo "Main user: $MAIN_USER"
 
-# ---- packages ------------------------------------------------------------
+# ---- packages (skipped when already in the image) ------------------------
 export DEBIAN_FRONTEND=noninteractive
-apt-get update
-apt-get install -y --no-install-recommends \
-  curl ca-certificates openssl samba avahi-daemon \
-  python3 python3-flask python3-tk mpg123 alsa-utils xdg-utils
+PKGS="curl ca-certificates openssl samba avahi-daemon python3 python3-flask python3-tk mpg123 alsa-utils xdg-utils"
+MISSING=0
+for p in $PKGS; do dpkg -s "$p" >/dev/null 2>&1 || MISSING=1; done
+if [[ $MISSING -eq 1 ]]; then
+  wait_net || { echo "No internet and packages are missing"; exit 1; }
+  apt-get update
+  apt-get install -y --no-install-recommends $PKGS
+fi
 
-# Docker (official convenience script; works on Debian/Raspberry Pi OS arm64)
+# Docker (already in the prebuilt image; otherwise the official convenience script)
 if ! command -v docker >/dev/null 2>&1; then
+  wait_net || { echo "No internet and Docker is missing"; exit 1; }
   curl -fsSL https://get.docker.com | sh
 fi
 usermod -aG docker "$MAIN_USER"
 systemctl enable --now docker
+for i in $(seq 1 60); do docker info >/dev/null 2>&1 && break; sleep 2; done
 
 # ---- files ---------------------------------------------------------------
 mkdir -p "$KIT_DIR" /srv/storage
@@ -121,7 +128,13 @@ bash "$KIT_DIR/system/make-shortcuts.sh" "$MAIN_USER"
 
 # ---- containers (Nextcloud + Home Assistant) -----------------------------
 cd "$KIT_DIR"
-docker compose --env-file .env pull || true
+# Load the app images that ship inside the prebuilt image (no download needed)
+if compgen -G "$KIT_DIR/images/*.tar.gz" >/dev/null; then
+  for f in "$KIT_DIR"/images/*.tar.gz; do
+    echo "Loading $f ..."
+    docker load -i "$f" && rm -f "$f"
+  done
+fi
 docker compose --env-file .env up -d
 
 # Nextcloud refuses addresses it doesn't know ("untrusted domain"). Wait for its first-run
